@@ -2,6 +2,12 @@
 
 An end-to-end prototype system for incremental retrieval, multi-intent decomposition, and session-aware answer refinement, built around a local Gemma 4 12B inference engine via Ollama.
 
+## Demo Video
+
+[Watch the StreamRAG Demo](https://drive.google.com/file/d/1ZrAH6erMhP7atYoGzpYAoRP9Covbcl3B/view?usp=drivesdk)
+
+Demo video: Samsung PRISM Generative AI Hackathon — Theme 4: Streaming Live RAG
+
 ## 1. Problem and Theme
 This system addresses streaming conversational RAG where a natural utterance may contain multiple intents and where late-arriving constraints should refine an existing answer. 
 
