@@ -1,0 +1,142 @@
+[
+  {
+    "scenario_id": "sc_01",
+    "name": "Simple Factual",
+    "description": "Single atomic factual question about RAG",
+    "tokens": [
+      "What",
+      "is",
+      "retrieval",
+      "augmented",
+      "generation",
+      "and",
+      "how",
+      "does",
+      "it",
+      "reduce",
+      "hallucinations"
+    ],
+    "expected_action": "RETRIEVE",
+    "expected_sub_queries": 1
+  },
+  {
+    "scenario_id": "sc_02",
+    "name": "Compound Multi-Intent",
+    "description": "Two distinct questions joined",
+    "tokens": [
+      "How",
+      "do",
+      "transformer",
+      "models",
+      "work",
+      "and",
+      "what",
+      "is",
+      "their",
+      "relationship",
+      "to",
+      "RAG",
+      "systems"
+    ],
+    "expected_action": "RETRIEVE",
+    "expected_sub_queries": 2
+  },
+  {
+    "scenario_id": "sc_03",
+    "name": "Late Constraint",
+    "description": "Question then adds year filter",
+    "tokens": [
+      "Tell",
+      "me",
+      "about",
+      "renewable",
+      "energy",
+      "progress",
+      "specifically",
+      "after",
+      "2020"
+    ],
+    "expected_action": "RETRIEVE",
+    "expected_sub_queries": 1
+  },
+  {
+    "scenario_id": "sc_04",
+    "name": "Navigational SUPPRESS",
+    "description": "Presentation control command",
+    "tokens": [
+      "next",
+      "slide",
+      "please"
+    ],
+    "expected_action": "SUPPRESS",
+    "expected_sub_queries": 0
+  },
+  {
+    "scenario_id": "sc_05",
+    "name": "Incomplete Fragment WAIT",
+    "description": "Trailing conjunction",
+    "tokens": [
+      "And",
+      "also",
+      "what",
+      "about",
+      "the"
+    ],
+    "expected_action": "WAIT",
+    "expected_sub_queries": 0
+  },
+  {
+    "scenario_id": "sc_06",
+    "name": "Multi-Domain Compound",
+    "description": "Space + medicine cross-domain question",
+    "tokens": [
+      "Compare",
+      "mRNA",
+      "vaccines",
+      "with",
+      "traditional",
+      "vaccines",
+      "and",
+      "also",
+      "explain",
+      "what",
+      "CRISPR",
+      "gene",
+      "editing",
+      "is",
+      "used",
+      "for"
+    ],
+    "expected_action": "RETRIEVE",
+    "expected_sub_queries": 2
+  },
+  {
+    "scenario_id": "sc_07",
+    "name": "Insufficient Evidence",
+    "description": "Question about quantum computing not in corpus",
+    "tokens": [
+      "Explain",
+      "quantum",
+      "error",
+      "correction",
+      "using",
+      "topological",
+      "qubits"
+    ],
+    "expected_action": "RETRIEVE",
+    "expected_sub_queries": 1
+  },
+  {
+    "scenario_id": "sc_08",
+    "name": "Filler Heavy WAIT",
+    "description": "Mostly filler words",
+    "tokens": [
+      "um",
+      "uh",
+      "well",
+      "so"
+    ],
+    "expected_action": "WAIT",
+    "expected_sub_queries": 0
+  }
+]

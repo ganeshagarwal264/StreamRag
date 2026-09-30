@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamRAG - Live Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    /* ── Design tokens ───────────────────────────────────────────────────── */
+    :root {
+        --bg:           #0d0d0d;
+        --surface:      #141414;
+        --card:         #1a1a1a;
+        --card-border:  #262626;
+        --hover:        #222222;
+        --accent:       #c8f135;   /* lime green */
+        --accent-dim:   rgba(200,241,53,0.12);
+        --accent-ring:  rgba(200,241,53,0.30);
+        --orange:       #f97316;
+        --orange-dim:   rgba(249,115,22,0.12);
+        --orange-ring:  rgba(249,115,22,0.30);
+        --red:          #ef4444;
+        --red-dim:      rgba(239,68,68,0.10);
+        --text:         #f0f0f0;
+        --text-muted:   #6b6b6b;
+        --text-soft:    #9a9a9a;
+        --radius-sm:    6px;
+        --radius-md:    10px;
+        --radius-lg:    14px;
+    }
+
+    /* ── Reset ───────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+        height: 100%;
+        font-family: 'Inter', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.5;
+        overflow: hidden;
+    }
+
+    /* ── Scrollbar ───────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+    /* ── Layout shell ────────────────────────────────────────────────────── */
+    .shell {
+        display: grid;
+        grid-template-rows: 52px 1fr 120px;
+        height: 100vh;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+    header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--card-border);
+        flex-shrink: 0;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Two-bar geometric logo mark */
+    .logo-mark {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        width: 22px;
+    }
+    .logo-mark .bar {
+        height: 3px;
+        border-radius: 2px;
+        background: var(--accent);
+    }
+    .logo-mark .bar:first-child { width: 22px; }
+    .logo-mark .bar:last-child  { width: 14px; }
+
+    .logo-text {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.3px;
+    }
+    .logo-text span { color: var(--accent); }
+
+    .logo-tagline {
+        font-size: 11px;
+        color: var(--text-muted);
+        border-left: 1px solid var(--card-border);
+        padding-left: 12px;
+        line-height: 1.2;
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .session-chip {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 11px;
+        color: var(--text-muted);
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-sm);
+        padding: 4px 10px;
+    }
+
+    .ws-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-soft);
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: 20px;
+        padding: 4px 10px;
+    }
+    .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #4ade80;
+        flex-shrink: 0;
+    }
+
+    .btn-header {
+        background: var(--accent-dim);
+        color: var(--accent);
+        border: 1px solid var(--accent-ring);
+        border-radius: var(--radius-sm);
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .btn-header:hover { background: rgba(200,241,53,0.2); }
+
+    /* ── Main columns ────────────────────────────────────────────────────── */
+    .main {
+        display: grid;
+        grid-template-columns: 300px 1fr 256px;
+        overflow: hidden;
+    }
+
+    /* ── Column generic ──────────────────────────────────────────────────── */
+    .col {
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        padding: 20px;
+        gap: 16px;
+        border-right: 1px solid var(--card-border);
+    }
+    .col:last-child { border-right: none; }
+
+    /* ── Card ────────────────────────────────────────────────────────────── */
+    .card {
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-lg);
+        padding: 18px;
+    }
+
+    .card-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        margin-bottom: 14px;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn {
+        background: var(--surface);
+        color: var(--text-soft);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-sm);
+        padding: 8px 12px;
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        line-height: 1;
+    }
+    .btn:hover { background: var(--hover); color: var(--text); }
+
+    .btn-primary {
+        background: var(--accent);
+        color: #0d0d0d;
+        border-color: var(--accent);
+        font-weight: 600;
+    }
+    .btn-primary:hover { background: #d4f53f; }
+
+    .btn-ghost {
+        background: transparent;
+        color: var(--text-muted);
+        border-color: transparent;
+    }
+    .btn-ghost:hover { background: var(--hover); color: var(--text); }
+
+    /* ── Input / textarea ────────────────────────────────────────────────── */
+    textarea {
+        width: 100%;
+        background: var(--surface);
+        border: 1px solid var(--card-border);
+        color: var(--text);
+        padding: 12px;
+        border-radius: var(--radius-md);
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        resize: vertical;
+        min-height: 110px;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--text-muted); }
+
+    /* ── Control grid ────────────────────────────────────────────────────── */
+    .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    /* ── Token stream ────────────────────────────────────────────────────── */
+    .token-stream {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        min-height: 36px;
+        margin-top: 4px;
+    }
+
+    .token-pill {
+        background: var(--surface);
+        border: 1px solid var(--card-border);
+        color: var(--text-soft);
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 11px;
+        animation: fadeIn 150ms ease-in forwards;
+    }
+
+    /* ── Quick prompts ───────────────────────────────────────────────────── */
+    .prompt-item {
+        background: var(--surface);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-md);
+        padding: 10px 12px;
+        font-size: 12px;
+        color: var(--text-soft);
+        cursor: pointer;
+        transition: all 0.15s;
+        line-height: 1.4;
+    }
+    .prompt-item:hover {
+        border-color: var(--accent-ring);
+        color: var(--text);
+        background: var(--accent-dim);
+    }
+
+    .quick-prompts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    /* ── Answer area ─────────────────────────────────────────────────────── */
+    .answer-display {
+        min-height: 200px;
+        flex: 1;
+        background: var(--surface);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 13px;
+        line-height: 1.7;
+        color: #d4d4d4;
+        overflow-y: auto;
+        position: relative;
+        white-space: pre-wrap;
+    }
+
+    .cursor {
+        display: inline-block;
+        width: 7px;
+        height: 1.1em;
+        background: var(--accent);
+        vertical-align: middle;
+        margin-left: 1px;
+        border-radius: 1px;
+        animation: blink 1s step-end infinite;
+    }
+
+    .latency-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .latency-value {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+
+    /* ── Citations ───────────────────────────────────────────────────────── */
+    .citations {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 12px;
+    }
+
+    .citation-badge {
+        background: rgba(200,241,53,0.08);
+        color: var(--accent);
+        border: 1px solid var(--accent-ring);
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        animation: scaleIn 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        transform: scale(0);
+    }
+
+    /* ── Insufficient evidence alert ─────────────────────────────────────── */
+    .alert-insufficient {
+        margin-top: 12px;
+        background: var(--red-dim);
+        border: 1px solid var(--red);
+        color: #fca5a5;
+        padding: 12px 14px;
+        border-radius: var(--radius-md);
+        font-size: 12px;
+        display: none;
+    }
+
+    /* ── Status badge ────────────────────────────────────────────────────── */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+    }
+    .badge.wait     { background: var(--orange-dim); color: var(--orange); border-color: var(--orange-ring); }
+    .badge.retrieve { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-ring); }
+    .badge.suppress { background: var(--red-dim);    color: var(--red);    border-color: rgba(239,68,68,0.3); }
+
+    /* ── Stat tiles ──────────────────────────────────────────────────────── */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .stat-tile {
+        background: var(--surface);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-md);
+        padding: 12px;
+    }
+
+    .stat-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+    }
+
+    .stat-value {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1;
+    }
+
+    /* ── List items (sub-queries / constraints) ───────────────────────────── */
+    .list-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .list-item {
+        background: var(--surface);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-sm);
+        padding: 8px 10px;
+        font-size: 12px;
+        color: var(--text-soft);
+        line-height: 1.4;
+    }
+
+    /* ── Timeline / live events ──────────────────────────────────────────── */
+    .timeline {
+        background: var(--surface);
+        border-top: 1px solid var(--card-border);
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        overflow-x: auto;
+        flex-shrink: 0;
+    }
+
+    .timeline-label {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding-right: 10px;
+        border-right: 1px solid var(--card-border);
+    }
+
+    .timeline-entry {
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-sm);
+        padding: 5px 10px;
+        font-size: 11px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        animation: slideIn 250ms ease-out forwards;
+        color: var(--text-soft);
+    }
+
+    .timeline-entry .ts { color: var(--text-muted); margin-right: 5px; }
+    .timeline-entry strong { color: var(--text); }
+
+    /* ── Section label ───────────────────────────────────────────────────── */
+    .section-label {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        margin-top: 16px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    /* ── Divider ─────────────────────────────────────────────────────────── */
+    .divider {
+        height: 1px;
+        background: var(--card-border);
+        margin: 2px 0;
+    }
+
+    /* ── Animations ──────────────────────────────────────────────────────── */
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes blink   { 50% { opacity: 0; } }
+    @keyframes scaleIn { to  { transform: scale(1); } }
+    @keyframes slideIn { from { transform: translateX(16px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
+<header>
+    <div class="header-left">
+        <div class="logo-mark">
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+        <span class="logo-text">Stream<span>RAG</span></span>
+        <span class="logo-tagline">Streaming Live RAG Engine</span>
+    </div>
+    <div class="header-right">
+        <div class="ws-pill">
+            <div class="dot" id="wsStatusDot"></div>
+            <span id="wsStatusText">Connecting…</span>
+        </div>
+        <div class="session-chip" id="sessionId">sess_…</div>
+        <button class="btn-header" id="btnReset">Reset Session <kbd style="opacity:0.6;font-size:10px;">Esc</kbd></button>
+    </div>
+</header>
+
+<!-- ══ MAIN ════════════════════════════════════════════════════════════════ -->
+<div class="main">
+
+    <!-- ── LEFT COLUMN: Input ────────────────────────────────────────────── -->
+    <div class="col">
+
+        <div class="card">
+            <div class="card-title">Speech Input</div>
+            <textarea id="speechInput" placeholder="Type or paste simulated speech here…"></textarea>
+
+            <div class="controls">
+                <button class="btn btn-primary" id="btnSendToken">Send Token <kbd style="opacity:0.6;font-size:10px;">Space</kbd></button>
+                <button class="btn" id="btnEndUtterance">End Utterance <kbd style="opacity:0.6;font-size:10px;">Enter</kbd></button>
+                <button class="btn" id="btnLoadDemo">Load Demo Script</button>
+                <button class="btn btn-ghost" style="color:var(--text-muted);">— — —</button>
+            </div>
+
+            <div class="section-label" style="margin-top:14px;">Token stream</div>
+            <div class="token-stream" id="tokenStream"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Quick Prompts</div>
+            <div class="quick-prompts-list">
+                <div class="prompt-item" onclick="loadPrompt('What is retrieval augmented generation and how does it reduce hallucinations?')">What is retrieval augmented generation and how does it reduce hallucinations?</div>
+                <div class="prompt-item" onclick="loadPrompt('Explain RAG architecture then compare it to fine-tuning.')">Explain RAG architecture then compare it to fine-tuning.</div>
+                <div class="prompt-item" onclick="loadPrompt('How do transformer models work and what is their relationship to RAG systems, and also explain why mRNA vaccines are significant for medicine')">Multi-intent: Transformers + RAG + mRNA vaccines</div>
+            </div>
+        </div>
+
+    </div><!-- /col left -->
+
+    <!-- ── CENTER COLUMN: Live Answer ────────────────────────────────────── -->
+    <div class="col">
+
+        <div class="card" style="flex:1;display:flex;flex-direction:column;gap:0;">
+            <div class="latency-row">
+                <span class="card-title" style="margin-bottom:0;">Live Answer</span>
+                <span class="latency-value" id="latencyIndicator">Latency: -- ms</span>
+            </div>
+
+            <div class="answer-display" id="answerDisplay">
+                <span id="answerContent"></span><span class="cursor" id="cursor" style="display:none;"></span>
+            </div>
+
+            <div class="citations" id="citations"></div>
+
+            <div class="alert-insufficient" id="alertInsufficient">
+                <strong>Insufficient Evidence</strong> — <span id="clarifyingQuestion"></span>
+            </div>
+        </div>
+
+    </div><!-- /col center -->
+
+    <!-- ── RIGHT COLUMN: System State ────────────────────────────────────── -->
+    <div class="col">
+
+        <div class="card">
+            <div class="card-title">System State</div>
+
+            <div class="section-label">Current Action</div>
+            <div class="badge wait" id="actionBadge" style="margin-bottom:16px;">WAIT</div>
+
+            <div class="divider" style="margin-bottom:16px;"></div>
+
+            <div class="stat-grid">
+                <div class="stat-tile">
+                    <div class="stat-label">Turns</div>
+                    <div class="stat-value" id="turnCount">0</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">Chunks</div>
+                    <div class="stat-value" id="chunkCount">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Sub-Queries</div>
+            <div class="list-group" id="subQueriesList">
+                <div class="list-item" style="color:var(--text-muted);font-style:italic;">None yet</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Active Constraints</div>
+            <div class="list-group" id="constraintsList">
+                <div class="list-item" style="color:var(--text-muted);font-style:italic;">None detected</div>
+            </div>
+        </div>
+
+    </div><!-- /col right -->
+
+</div><!-- /main -->
+
+<!-- ══ LIVE EVENTS BAR ══════════════════════════════════════════════════════ -->
+<div class="timeline" id="timeline">
+    <div class="timeline-label">Live Events</div>
+</div>
+
+</div><!-- /shell -->
+
+<script>
+    // ── App State ────────────────────────────────────────────────────────────
+    const sessionId = 'sess_' + Math.random().toString(36).substr(2,9);
+    document.getElementById('sessionId').innerText = sessionId;
+
+    let ws = null;
+    let reconnectDelay = 1000;
+
+    let currentWords = [];
+    let wordIndex = 0;
+    let lastSentWordCount = 0;
+    let turns = 0;
+    let isSynthesizing = false;
+
+    // ── UI Elements ──────────────────────────────────────────────────────────
+    const speechInput        = document.getElementById('speechInput');
+    const tokenStream        = document.getElementById('tokenStream');
+    const answerContent      = document.getElementById('answerContent');
+    const cursor             = document.getElementById('cursor');
+    const citationsDiv       = document.getElementById('citations');
+    const alertInsufficient  = document.getElementById('alertInsufficient');
+    const clarifyingQuestion = document.getElementById('clarifyingQuestion');
+    const latencyIndicator   = document.getElementById('latencyIndicator');
+    const actionBadge        = document.getElementById('actionBadge');
+    const turnCount          = document.getElementById('turnCount');
+    const chunkCount         = document.getElementById('chunkCount');
+    const subQueriesList     = document.getElementById('subQueriesList');
+    const constraintsList    = document.getElementById('constraintsList');
+    const timeline           = document.getElementById('timeline');
+    const wsStatusDot        = document.getElementById('wsStatusDot');
+    const wsStatusText       = document.getElementById('wsStatusText');
+
+    // ── WebSocket Connection ─────────────────────────────────────────────────
+    function connect() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/${sessionId}`;
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            wsStatusDot.style.background = '#4ade80';
+            wsStatusText.innerText = 'Connected';
+            reconnectDelay = 1000;
+            logEvent('System', 'Connected to server');
+        };
+
+        ws.onclose = () => {
+            wsStatusDot.style.background = '#ef4444';
+            wsStatusText.innerText = 'Disconnected';
+            logEvent('System', `Reconnecting in ${reconnectDelay}ms…`);
+            setTimeout(connect, reconnectDelay);
+            reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            handleServerEvent(data);
+        };
+    }
+
+    // ── Server Event Handler ─────────────────────────────────────────────────
+    function handleServerEvent(data) {
+        logEvent('Server', data.type);
+
+        switch (data.type) {
+            case 'status':
+                actionBadge.className = 'badge ' + data.action.toLowerCase();
+                actionBadge.innerText = data.action;
+                actionBadge.style.transform = 'scale(1.1)';
+                setTimeout(() => actionBadge.style.transform = 'scale(1)', 200);
+                if (data.action === 'RETRIEVE') {
+                    answerContent.innerHTML = '';
+                    citationsDiv.innerHTML = '';
+                    alertInsufficient.style.display = 'none';
+                    cursor.style.display = 'inline-block';
+                }
+                break;
+
+            case 'decomposed':
+                subQueriesList.innerHTML = '';
+                data.sub_queries.forEach(sq => {
+                    const el = document.createElement('div');
+                    el.className = 'list-item';
+                    el.innerHTML = `<strong style="color:var(--accent);">[${sq.intent_type}]</strong> ${sq.text}`;
+                    subQueriesList.appendChild(el);
+                });
+                break;
+
+            case 'retrieved':
+                turns += 1;
+                turnCount.innerText = turns;
+                chunkCount.innerText = data.chunk_count;
+                latencyIndicator.innerText = `Retrieval: ${data.latency_ms} ms`;
+                if (data.chunk_count > 0) {
+                    isSynthesizing = true;
+                    answerContent.innerHTML = '<span id="synthesizingIndicator" style="color:var(--text-muted);font-style:italic;">Synthesizing answer…</span>';
+                }
+                break;
+
+            case 'token':
+                if (isSynthesizing) {
+                    const ind = document.getElementById('synthesizingIndicator');
+                    if (ind) ind.remove();
+                    isSynthesizing = false;
+                }
+                answerContent.innerHTML += data.content;
+                break;
+
+            case 'citation':
+                const cite = document.createElement('div');
+                cite.className = 'citation-badge';
+                cite.innerText = `[${data.doc_id} §${data.section}]`;
+                citationsDiv.appendChild(cite);
+                break;
+
+            case 'done':
+                if (isSynthesizing) {
+                    const ind = document.getElementById('synthesizingIndicator');
+                    if (ind) ind.remove();
+                    isSynthesizing = false;
+                }
+                cursor.style.display = 'none';
+                latencyIndicator.innerText = `Total: ${data.latency_ms} ms`;
+                break;
+
+            case 'insufficient_evidence':
+                alertInsufficient.style.display = 'block';
+                clarifyingQuestion.innerText = data.clarifying_question;
+                break;
+
+            case 'constraints_cleared':
+                constraintsList.innerHTML = '<div class="list-item" style="color:var(--text-muted);font-style:italic;">None detected</div>';
+                break;
+
+            case 'delta_detected':
+                if (Object.keys(data.constraints).length === 0) {
+                    constraintsList.innerHTML = '<div class="list-item" style="color:var(--text-muted);font-style:italic;">None detected</div>';
+                } else {
+                    constraintsList.innerHTML = '';
+                    Object.entries(data.constraints).forEach(([k, v]) => {
+                        const el = document.createElement('div');
+                        el.className = 'list-item';
+                        el.innerHTML = `<strong style="color:var(--orange);">${k}</strong>: ${v}`;
+                        constraintsList.appendChild(el);
+                    });
+                }
+                break;
+
+            case 'refining':
+                answerContent.innerHTML = '';
+                cursor.style.display = 'inline-block';
+                break;
+
+            case 'reset_ack':
+                clearUI();
+                break;
+
+            case 'error':
+                logEvent('Error', data.message);
+                if (isSynthesizing) {
+                    answerContent.innerHTML = '<span style="color:var(--red);font-weight:bold;">Generation timed out or failed. Please try the query again.</span>';
+                    isSynthesizing = false;
+                    cursor.style.display = 'none';
+                }
+                break;
+        }
+    }
+
+    // ── Event Logger ─────────────────────────────────────────────────────────
+    function logEvent(source, text) {
+        const entry = document.createElement('div');
+        entry.className = 'timeline-entry';
+        const time = new Date().toLocaleTimeString([], {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'});
+        entry.innerHTML = `<span class="ts">${time}</span><strong>${source}</strong>: ${text}`;
+        // Insert after the label element
+        const label = timeline.querySelector('.timeline-label');
+        timeline.insertBefore(entry, label ? label.nextSibling : timeline.firstChild);
+        if (timeline.querySelectorAll('.timeline-entry').length > 10) {
+            const entries = timeline.querySelectorAll('.timeline-entry');
+            entries[entries.length - 1].remove();
+        }
+    }
+
+    // ── Auto-send on space/newline in textarea ───────────────────────────────
+    speechInput.addEventListener('input', (e) => {
+        const text = speechInput.value;
+        if (text.endsWith(' ') || text.endsWith('\n')) {
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+            while (lastSentWordCount < words.length) {
+                const word = words[lastSentWordCount];
+                if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                ws.send(JSON.stringify({ type: 'token', content: word + ' ' }));
+
+                const pill = document.createElement('div');
+                pill.className = 'token-pill';
+                pill.innerText = word;
+                tokenStream.appendChild(pill);
+
+                lastSentWordCount++;
+            }
+        }
+    });
+
+    // ── Interaction Functions ─────────────────────────────────────────────────
+    function sendNextToken() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+        const text = speechInput.value.trim();
+        if (!text) return;
+
+        const newWords = text.split(/\s+/).filter(w => w.length > 0);
+        if (newWords.join(' ') !== currentWords.join(' ')) {
+            currentWords = newWords;
+            wordIndex = 0; lastSentWordCount = 0;
+            tokenStream.innerHTML = '';
+        }
+
+        if (wordIndex < currentWords.length) {
+            const word = currentWords[wordIndex] + ' ';
+            ws.send(JSON.stringify({ type: 'token', content: word }));
+
+            const pill = document.createElement('div');
+            pill.className = 'token-pill';
+            pill.innerText = currentWords[wordIndex];
+            tokenStream.appendChild(pill);
+            tokenStream.scrollTop = tokenStream.scrollHeight;
+
+            logEvent('Client', `token: ${currentWords[wordIndex]}`);
+            wordIndex++;
+        }
+    }
+
+    function endUtterance() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({ type: 'end_of_utterance' }));
+        logEvent('Client', 'end_of_utterance');
+    }
+
+    function resetSession() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({ type: 'reset' }));
+        logEvent('Client', 'reset');
+    }
+
+    function clearUI() {
+        speechInput.value = '';
+        currentWords = [];
+        wordIndex = 0; lastSentWordCount = 0;
+        turns = 0;
+        isSynthesizing = false;
+        tokenStream.innerHTML = '';
+        answerContent.innerHTML = '';
+        citationsDiv.innerHTML = '';
+        alertInsufficient.style.display = 'none';
+        cursor.style.display = 'none';
+        latencyIndicator.innerText = 'Latency: -- ms';
+        actionBadge.className = 'badge wait';
+        actionBadge.innerText = 'WAIT';
+        turnCount.innerText = '0';
+        chunkCount.innerText = '0';
+        subQueriesList.innerHTML = '<div class="list-item" style="color:var(--text-muted);font-style:italic;">None yet</div>';
+        constraintsList.innerHTML = '<div class="list-item" style="color:var(--text-muted);font-style:italic;">None detected</div>';
+    }
+
+    function loadPrompt(text) {
+        speechInput.value = text;
+        currentWords = text.split(/\s+/).filter(w => w.length > 0);
+        wordIndex = 0; lastSentWordCount = 0;
+        tokenStream.innerHTML = '';
+    }
+
+    // ── Button Listeners ──────────────────────────────────────────────────────
+    document.getElementById('btnSendToken').addEventListener('click', sendNextToken);
+    document.getElementById('btnEndUtterance').addEventListener('click', endUtterance);
+    document.getElementById('btnReset').addEventListener('click', resetSession);
+    document.getElementById('btnLoadDemo').addEventListener('click', () => {
+        loadPrompt('How do transformer models work and what is their relationship to RAG systems, and also explain why mRNA vaccines are significant for medicine');
+    });
+
+    // ── Keyboard Shortcuts ────────────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        // When typing in the textarea, Enter submits the utterance; Space is normal
+        if (e.target.id === 'speechInput') {
+            if (e.code === 'Enter') {
+                e.preventDefault();
+                endUtterance();
+            }
+            return;
+        }
+
+        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+
+        if (e.code === 'Space') {
+            e.preventDefault();
+            sendNextToken();
+        } else if (e.code === 'Enter') {
+            e.preventDefault();
+            endUtterance();
+        } else if (e.code === 'Escape') {
+            e.preventDefault();
+            resetSession();
+        }
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    connect();
+</script>
+</body>
+</html>

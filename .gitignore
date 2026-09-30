@@ -1,0 +1,72 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ── Virtual Environments ──────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ── Data & Models (large files) ───────────────────────────────────────────────
+data/chroma_db/
+*.bin
+*.pt
+*.safetensors
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.jsonl
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+
+# Temporary Agent Debug Scripts
+*.txt
+!README.md
+!requirements.txt
+!docs/*.txt
+patch_*.py
+diag_*.py
+eval_*.py
+fix*.py
+scratch_*.py
+trace_*.py
+/test_*.py
+check_*.py
+append_*.py
+print_final_*.py
+raw_ollama*.py
+generate_summary_pdf.py
+update_readme.py
+*.zip
+data/chroma_db_backup/
+v1_minimal/
+ui_audit/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+scripts/patch_*
+scripts/diag_*
